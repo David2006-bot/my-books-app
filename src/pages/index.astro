@@ -1,6 +1,6 @@
 ---
 // src/pages/index.astro
-import { supabase } from '../lib/supabase';
+import { supabase } from "../lib/supabase";
 
 // 1. PROTECCIÓN: Si no hay cookie, mandamos al login
 const session = Astro.cookies.get("user_session");
@@ -23,70 +23,232 @@ if (Astro.request.method === "POST") {
   if (action === "add") {
     const titulo = formData.get("titulo");
     const autor = formData.get("autor");
-    if (titulo && autor) await supabase.from('libros').insert([{ titulo, autor }]);
+    if (titulo && autor)
+      await supabase.from("libros").insert([{ titulo, autor }]);
   }
 
   // Acción: Eliminar Libro
   if (action === "delete") {
     const id = formData.get("id");
-    await supabase.from('libros').delete().eq('id', id);
+    await supabase.from("libros").delete().eq("id", id);
   }
 }
 
 // 3. OBTENER DATOS
-const { data: libros } = await supabase.from('libros').select('*').order('id', { ascending: false });
+const { data: libros } = await supabase
+  .from("libros")
+  .select("*")
+  .order("id", { ascending: false });
 ---
 
 <html lang="es">
-<head>
+  <head>
     <meta charset="utf-8" />
     <title>Admin | Biblioteca</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #f4f4f9; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; margin-bottom: 1.5rem; }
-        form.add-form { display: grid; gap: 10px; margin-bottom: 2rem; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        .btn-add { background: #0070f3; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-logout { background: #ff4d4d; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-        .libro-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; }
-        .btn-delete { background: none; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
-        .btn-delete:hover { background: #ff4d4d; color: white; }
+      /* 1. Estilos base (PC) */
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f4f4f9;
+        padding: 20px;
+        margin: 0;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 650px; /* Ancho elegante para PC */
+        margin: 20px auto;
+        background: white;
+        padding: 2.5rem; /* Padding grande para PC */
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 2rem;
+        gap: 10px;
+      }
+
+      h1 {
+        font-size: 1.7rem;
+        margin: 0;
+      }
+
+      form.add-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 2.5rem;
+      }
+
+      input {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .btn-add {
+        background: #0070f3;
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        transition: background 0.2s;
+      }
+      .btn-add:hover {
+        background: #0056b3;
+      }
+
+      .btn-logout {
+        background: #ff4d4d;
+        color: white;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        white-space: nowrap;
+      }
+
+      .libro-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        gap: 15px;
+      }
+
+      .info {
+        flex: 1;
+        min-width: 0;
+      } /* Crucial para texto responsivo */
+      .info strong {
+        display: block;
+        font-size: 1.1rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .info span {
+        color: #666;
+        font-size: 0.95rem;
+      }
+
+      .btn-delete {
+        background: #fff0f0;
+        border: 1px solid #ff4d4d;
+        color: #ff4d4d;
+        padding: 7px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+      .btn-delete:hover {
+        background: #ff4d4d;
+        color: white;
+      }
+
+      /* 2. MEDIA QUERY: AJUSTES ESPECÍFICOS PARA CELULAR (Ancho menor a 500px) */
+      @media (max-width: 500px) {
+        body {
+          padding: 10px;
+        } /* Reducimos el margen del body */
+
+        .container {
+          /* El contenedor ahora ocupa el 95% del ancho móvil */
+          width: 95%;
+          padding: 1.5rem 1rem; /* Reducimos padding interno */
+          margin: 10px auto;
+          max-width: none; /* Importante: quitamos el límite de ancho */
+        }
+
+        .header {
+          flex-direction: column; /* Apilamos logo y logout verticalmente */
+          gap: 15px;
+          align-items: center;
+          text-align: center;
+        }
+        h1 {
+          font-size: 1.4rem;
+        }
+
+        .libro-card {
+          flex-direction: column; /* Apilamos info del libro y botón eliminar */
+          align-items: flex-start;
+          gap: 10px;
+        }
+        .info strong {
+          white-space: normal;
+        } /* Permitimos que el título salte de línea */
+        .btn-delete {
+          width: 100%;
+          text-align: center;
+        } /* Botón eliminar ancho completo */
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>📚 Mis Libros</h1>
-            <form method="POST">
-                <input type="hidden" name="action" value="logout" />
-                <button type="submit" class="btn-logout">Cerrar Sesión</button>
-            </form>
-        </div>
-
-        <form method="POST" class="add-form">
-            <input type="hidden" name="action" value="add" />
-            <input type="text" name="titulo" placeholder="Título del libro" required />
-            <input type="text" name="autor" placeholder="Autor" required />
-            <button type="submit" class="btn-add">Registrar Libro</button>
+      <div class="header">
+        <h1> Mis Libros </h1>
+        <form method="POST">
+          <input type="hidden" name="action" value="logout" />
+          <button type="submit" class="btn-logout">Cerrar Sesion</button>
         </form>
+      </div>
 
-        <div class="lista">
-            {libros?.length === 0 && <p style="text-align:center; color: #888;">No hay registros.</p>}
-            {libros?.map((libro) => (
-                <div class="libro-card">
-                    <div>
-                        <strong style="display:block;">{libro.titulo}</strong>
-                        <span style="color: #666; font-size: 0.9rem;">{libro.autor}</span>
-                    </div>
-                    <form method="POST">
-                        <input type="hidden" name="action" value="delete" />
-                        <input type="hidden" name="id" value={libro.id} />
-                        <button type="submit" class="btn-delete">Eliminar</button>
-                    </form>
-                </div>
-            ))}
-        </div>
+      <form method="POST" class="add-form">
+        <input type="hidden" name="action" value="add" />
+        <input
+          type="text"
+          name="titulo"
+          placeholder="Título del libro"
+          required
+        />
+        <input type="text" name="autor" placeholder="Autor" required />
+        <button type="submit" class="btn-add">Registrar Libro</button>
+      </form>
+
+      <div class="lista">
+        {
+          libros?.length === 0 && (
+            <p style="text-align:center; color: #888;">No hay registros.</p>
+          )
+        }
+        {
+          libros?.map((libro) => (
+            <div class="libro-card">
+              <div>
+                <strong style="display:block;">{libro.titulo}</strong>
+                <span style="color: #666; font-size: 0.9rem;">
+                  {libro.autor}
+                </span>
+              </div>
+              <form method="POST">
+                <input type="hidden" name="action" value="delete" />
+                <input type="hidden" name="id" value={libro.id} />
+                <button type="submit" class="btn-delete">
+                  Eliminar
+                </button>
+              </form>
+            </div>
+          ))
+        }
+      </div>
     </div>
-</body>
+  </body>
 </html>
