@@ -1,17 +1,92 @@
 ---
+// src/pages/index.astro
+import { supabase } from '../lib/supabase';
 
+// 1. PROTECCIÓN: Si no hay cookie, mandamos al login
+const session = Astro.cookies.get("user_session");
+if (!session) {
+  return Astro.redirect("/login");
+}
+
+// 2. LÓGICA DE ACCIONES
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = formData.get("action");
+
+  // Acción: Cerrar Sesión
+  if (action === "logout") {
+    Astro.cookies.delete("user_session");
+    return Astro.redirect("/login");
+  }
+
+  // Acción: Añadir Libro
+  if (action === "add") {
+    const titulo = formData.get("titulo");
+    const autor = formData.get("autor");
+    if (titulo && autor) await supabase.from('libros').insert([{ titulo, autor }]);
+  }
+
+  // Acción: Eliminar Libro
+  if (action === "delete") {
+    const id = formData.get("id");
+    await supabase.from('libros').delete().eq('id', id);
+  }
+}
+
+// 3. OBTENER DATOS
+const { data: libros } = await supabase.from('libros').select('*').order('id', { ascending: false });
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Admin | Biblioteca</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f4f4f9; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; margin-bottom: 1.5rem; }
+        form.add-form { display: grid; gap: 10px; margin-bottom: 2rem; }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .btn-add { background: #0070f3; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-logout { background: #ff4d4d; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .libro-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; }
+        .btn-delete { background: none; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+        .btn-delete:hover { background: #ff4d4d; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Mis Libros</h1>
+            <form method="POST">
+                <input type="hidden" name="action" value="logout" />
+                <button type="submit" class="btn-logout">Cerrar Sesión</button>
+            </form>
+        </div>
+
+        <form method="POST" class="add-form">
+            <input type="hidden" name="action" value="add" />
+            <input type="text" name="titulo" placeholder="Título del libro" required />
+            <input type="text" name="autor" placeholder="Autor" required />
+            <button type="submit" class="btn-add">Registrar Libro</button>
+        </form>
+
+        <div class="lista">
+            {libros?.length === 0 && <p style="text-align:center; color: #888;">No hay registros.</p>}
+            {libros?.map((libro) => (
+                <div class="libro-card">
+                    <div>
+                        <strong style="display:block;">{libro.titulo}</strong>
+                        <span style="color: #666; font-size: 0.9rem;">{libro.autor}</span>
+                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="delete" />
+                        <input type="hidden" name="id" value={libro.id} />
+                        <button type="submit" class="btn-delete">Eliminar</button>
+                    </form>
+                </div>
+            ))}
+        </div>
+    </div>
+</body>
 </html>
