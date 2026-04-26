@@ -1,248 +1,234 @@
 ---
-// src/pages/index.astro
+//conexion para traer los datos
 import { supabase } from "../lib/supabase";
 
-// 1. PROTECCIÓN: Si no hay cookie, mandamos al login
+// Si no hay cookie, mandamos al login
 const session = Astro.cookies.get("user_session");
 if (!session) {
   return Astro.redirect("/login");
 }
 
-// 2. LÓGICA DE ACCIONES
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const action = formData.get("action");
 
-  // Acción: Cerrar Sesión
-  if (action === "logout") {
-    Astro.cookies.delete("user_session");
-    return Astro.redirect("/login");
+  if (action === "create") {
+    await supabase.from("pedidos").insert([
+      {
+        cliente: formData.get("cliente"),
+        producto: formData.get("producto"),
+        cantidad: formData.get("cantidad"),
+      },
+    ]);
   }
 
-  // Acción: Añadir Libro
-  if (action === "add") {
-    const titulo = formData.get("titulo");
-    const autor = formData.get("autor");
-    if (titulo && autor)
-      await supabase.from("libros").insert([{ titulo, autor }]);
-  }
-
-  // Acción: Eliminar Libro
   if (action === "delete") {
+    await supabase.from("pedidos").delete().eq("id", formData.get("id"));
+  }
+
+  if (action === "update_status") {
     const id = formData.get("id");
-    await supabase.from("libros").delete().eq("id", id);
+    const nuevoEstado = formData.get("nuevoEstado");
+    await supabase.from("pedidos").update({ estado: nuevoEstado }).eq("id", id);
   }
 }
 
-// 3. OBTENER DATOS
-const { data: libros } = await supabase
-  .from("libros")
+// 2. OBTENER DATOS ACTUALIZADOS
+const { data: pedidos } = await supabase
+  .from("pedidos")
   .select("*")
-  .order("id", { ascending: false });
+  .order("created_at", { ascending: false });
 ---
 
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Admin | Biblioteca</title>
+    <title>Sistema de Pedidos - David Saravia</title>
     <style>
-      /* 1. Estilos base (PC) */
       body {
-        font-family: system-ui, sans-serif;
+        font-family: sans-serif;
         background: #f4f4f9;
         padding: 20px;
-        margin: 0;
       }
-
       .container {
-        width: 100%;
-        max-width: 650px; /* Ancho elegante para PC */
-        margin: 20px auto;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .card {
         background: white;
-        padding: 2.5rem; /* Padding grande para PC */
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        box-sizing: border-box;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       }
-
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 2rem;
-        gap: 10px;
-      }
-
-      h1 {
-        font-size: 1.7rem;
-        margin: 0;
-      }
-
-      form.add-form {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-bottom: 2.5rem;
-      }
-
       input {
-        padding: 12px 15px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 16px;
         width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
         box-sizing: border-box;
       }
-
-      .btn-add {
-        background: #0070f3;
+      button {
+        background: #3e49c3;
         color: white;
         border: none;
-        padding: 14px;
-        border-radius: 8px;
+        padding: 10px;
+        width: 100%;
+        border-radius: 4px;
         cursor: pointer;
-        font-weight: bold;
-        font-size: 16px;
-        transition: background 0.2s;
       }
-      .btn-add:hover {
-        background: #0056b3;
-      }
-
-      .btn-logout {
-        background: #ff4d4d;
-        color: white;
-        border: none;
-        padding: 8px 14px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        white-space: nowrap;
-      }
-
-      .libro-card {
+      .pedido-item {
         display: flex;
         justify-content: space-between;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
         align-items: center;
-        padding: 18px;
-        border: 1px solid #eee;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        gap: 15px;
       }
-
-      .info {
-        flex: 1;
-        min-width: 0;
-      } /* Crucial para texto responsivo */
-      .info strong {
-        display: block;
-        font-size: 1.1rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+      .btn-del {
+        background: #dc3545;
+        padding: 5px 10px;
+        font-size: 0.8rem;
       }
-      .info span {
-        color: #666;
-        font-size: 0.95rem;
-      }
-
-      .btn-delete {
-        background: #fff0f0;
-        border: 1px solid #ff4d4d;
-        color: #ff4d4d;
-        padding: 7px 15px;
-        border-radius: 6px;
+      .status-select {
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        background-color: #fff;
         cursor: pointer;
-        font-size: 0.85rem;
-      }
-      .btn-delete:hover {
-        background: #ff4d4d;
-        color: white;
+        font-size: 0.9rem;
       }
 
-      /* 2. MEDIA QUERY: AJUSTES ESPECÍFICOS PARA CELULAR (Ancho menor a 500px) */
-      @media (max-width: 500px) {
-        body {
-          padding: 10px;
-        } /* Reducimos el margen del body */
+      .status-select:focus {
+        outline: none;
+        border-color: #0070f3;
+      }
+      .btn-edit {
+        background: #606afc;
+        color: black;
+        padding: 5px 10px;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin: 0 5px;
+      }
 
-        .container {
-          /* El contenedor ahora ocupa el 95% del ancho móvil */
-          width: 95%;
-          padding: 1.5rem 1rem; /* Reducimos padding interno */
-          margin: 10px auto;
-          max-width: none; /* Importante: quitamos el límite de ancho */
-        }
+      /* Borra las anteriores de status-xxx y pon estas: */
+      .status-pendiente {
+        background-color: #fff3cd !important;
+      }
+      .status-procesando {
+        background-color: #cce5ff !important;
+      }
+      .status-entregado {
+        background-color: #d4edda !important;
+      }
+      .status-cancelado {
+        background-color: #f8d7da !important;
+      }
 
-        .header {
-          flex-direction: column; /* Apilamos logo y logout verticalmente */
-          gap: 15px;
-          align-items: center;
-          text-align: center;
-        }
-        h1 {
-          font-size: 1.4rem;
-        }
-
-        .libro-card {
-          flex-direction: column; /* Apilamos info del libro y botón eliminar */
-          align-items: flex-start;
-          gap: 10px;
-        }
-        .info strong {
-          white-space: normal;
-        } /* Permitimos que el título salte de línea */
-        .btn-delete {
-          width: 100%;
-          text-align: center;
-        } /* Botón eliminar ancho completo */
+      /* Mantén un color de fondo base para que no se vea vacío */
+      .pedido-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border-bottom: 3px solid #eee;
+        align-items: center;
+        transition: background-color 0.3s ease; /* Transición suave al cambiar */
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="header">
-        <h1> Mis Libros </h1>
+      <h1>Pedidos - David Saravia</h1>
+
+      <div class="card">
+        <h3>Nuevo Pedido</h3>
         <form method="POST">
-          <input type="hidden" name="action" value="logout" />
-          <button type="submit" class="btn-logout">Cerrar Sesion</button>
+          <input type="hidden" name="action" value="create" />
+          <input
+            type="text"
+            name="cliente"
+            placeholder="Nombre del Cliente"
+            required
+          />
+
+          <input
+            type="number"
+            name="cantidad"
+            placeholder="Cantidad del Producto"
+            required
+          />
+
+          <input
+            type="text"
+            name="producto"
+            placeholder="Nombre del Producto"
+            required
+          />
+          <button type="submit">Guardar Pedido</button>
         </form>
       </div>
 
-      <form method="POST" class="add-form">
-        <input type="hidden" name="action" value="add" />
-        <input
-          type="text"
-          name="titulo"
-          placeholder="Título del libro"
-          required
-        />
-        <input type="text" name="autor" placeholder="Autor" required />
-        <button type="submit" class="btn-add">Registrar Libro</button>
-      </form>
-
-      <div class="lista">
+      <div class="card">
+        <h3>Lista de Pedidos</h3>
         {
-          libros?.length === 0 && (
-            <p style="text-align:center; color: #888;">No hay registros.</p>
-          )
-        }
-        {
-          libros?.map((libro) => (
-            <div class="libro-card">
-              <div>
-                <strong style="display:block;">{libro.titulo}</strong>
-                <span style="color: #666; font-size: 0.9rem;">
-                  {libro.autor}
-                </span>
+          pedidos?.map((pedido) => (
+            <div class="pedido-item">
+              <div class={`pedido-item status-${pedido.estado}`}>
+                <strong>{pedido.cliente}</strong> ({pedido.cantidad})
+                <br />
+                <small>
+                  {pedido.producto} -{" "}
+                  {new Date(pedido.created_at).toLocaleDateString("es-ES", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "2-digit",
+                  })}
+                </small>
               </div>
+
+              <a href={`/editar/${pedido.id}`} class="btn-edit">
+                Editar
+              </a>
+
+              <form method="POST" onchange="this.submit()">
+                <input type="hidden" name="action" value="update_status" />
+                <input type="hidden" name="id" value={pedido.id} />
+
+                <select name="nuevoEstado" class="status-select">
+                  <option
+                    value="pendiente"
+                    selected={pedido.estado === "pendiente"}
+                  >
+                    Pendiente
+                  </option>
+                  <option
+                    value="procesando"
+                    selected={pedido.estado === "procesando"}
+                  >
+                    Procesando
+                  </option>
+                  <option
+                    value="entregado"
+                    selected={pedido.estado === "entregado"}
+                  >
+                    Entregado
+                  </option>
+                  <option
+                    value="cancelado"
+                    selected={pedido.estado === "cancelado"}
+                  >
+                    Cancelado
+                  </option>
+                </select>
+              </form>
+
               <form method="POST">
                 <input type="hidden" name="action" value="delete" />
-                <input type="hidden" name="id" value={libro.id} />
-                <button type="submit" class="btn-delete">
-                  Eliminar
+                <input type="hidden" name="id" value={pedido.id} />
+                <button type="submit" class="btn-del">
+                  X
                 </button>
               </form>
             </div>

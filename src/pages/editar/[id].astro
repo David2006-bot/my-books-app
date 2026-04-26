@@ -1,0 +1,75 @@
+---
+import { supabase } from "../../lib/supabase";
+const { id } = Astro.params;
+const { data: pedido } = await supabase
+  .from("pedidos")
+  .select("*")
+  .eq("id", id)
+  .single();
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  await supabase
+    .from("pedidos")
+    .update({
+      cliente: formData.get("cliente"),
+      cantidad: formData.get("cantidad"),
+      producto: formData.get("producto"),
+    })
+    .eq("id", id);
+  return Astro.redirect("/");
+}
+---
+
+<html lang="es">
+  <head>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: #f4f4f9;
+        font-family: sans-serif;
+      }
+      .edit-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        width: 350px;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        width: 100%;
+        background: #0070f3;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="edit-card">
+      <h1>Editar Pedido</h1>
+      <form method="POST">
+        <input name="cliente" value={pedido.cliente} required />
+        <input name="cantidad" value={pedido.cantidad} type="number" required />
+        <input name="producto" value={pedido.producto} required />
+        <button type="submit">Guardar Cambios</button>
+        <a href="/" style="display:block; text-align:center; margin-top:10px;"
+          >Cancelar</a
+        >
+      </form>
+    </div>
+  </body>
+</html>
